@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fashion Visual Search & Intelligent Styling Assistan</title>
+
+  <!-- Vanta.js dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      overflow-x: hidden;
+    }
+    #background {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      top: 0; left: 0;
+      z-index: -1;
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      background: transparent;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-weight: 700;
+      font-size: 2.5rem;
+      color: #FF0000;
+      text-shadow: 1px 1px 5px rgba(255,0,0,0.7);
+    }
+    #searchBar {
+      width: 350px;
+      max-width: 90vw;
+      padding: 12px 15px;
+      font-size: 18px;
+      border: none;
+      border-radius: 25px;
+      outline: none;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+      transition: box-shadow 0.3s ease;
+      background-color: #222;
+      color: #fff;
+    }
+    #searchBar:focus {
+      box-shadow: 0 0 15px #FF0000;
+      background-color: #333;
+    }
+    #results {
+      margin-top: 40px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 25px;
+      max-width: 1200px;
+      width: 100%;
+    }
+    .card {
+      background: #222;
+      width: 320px;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      transform-style: preserve-3d;
+      color: #fff;
+    }
+    .card:hover {
+      box-shadow: 0 15px 35px rgba(255, 0, 0, 0.7);
+      transform: scale(1.05) translateZ(10px);
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    .title {
+      padding: 12px 15px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      line-height: 1.2;
+      height: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    @media (max-width: 768px) {
+      .card {
+        width: 90vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="background"></div>
+
+  <div class="page">
+    <h1>Fashion Visual Search</h1>
+    <input
+      type="text"
+      id="searchBar"
+      placeholder="Search for dresses, jeans, etc. and hit Enter"
+      autocomplete="off"
+    />
+    <div id="results"></div>
+  </div>
+
+  <script>
+    VANTA.NET({
+      el: "#background",
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200.0,
+      minWidth: 200.0,
+      scale: 1.0,
+      scaleMobile: 1.0,
+      color: 0xff0000,
+      backgroundColor: 0x111111,
+      maxDistance: 22.0,
+    });
+
+    const searchBar = document.getElementById('searchBar');
+    const results = document.getElementById('results');
+
+    function renderResults(items) {
+      results.innerHTML = '';
+      if (items.length === 0) {
+        results.innerHTML = `<p style="color:#f00; font-weight:bold;">No results found.</p>`;
+        return;
+      }
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${item.image}" alt="Product Image" loading="lazy" />
+          <div class="title">${item.title}</div>
+        `;
+        results.appendChild(card);
+      });
+      attach3DTiltEffect();
+    }
+
+    searchBar.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const keyword = searchBar.value.trim();
+        if (keyword.length < 1) return;
+        fetch('/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keyword: keyword })
+        })
+        .then(res => res.json())
+        .then(data => {
+          renderResults(data);
+        })
+        .catch(err => {
+          results.innerHTML = `<p style="color:#f00;">Error fetching results</p>`;
+          console.error(err);
+        });
+      }
+    });
+
+    function attach3DTiltEffect() {
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          const rotateX = ((y - centerY) / centerY) * 10;
+          const rotateY = ((x - centerX) / centerX) * 10;
+          card.style.transform = `rotateX(${-rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
+        });
+      });
+    }
+  </script>
+</body>
+</html>
