@@ -19,7 +19,7 @@ An end-to-end machine learning system that enables basic image classification fo
 
 4. **Web Deployment with Flask**  
    - Developed a user-friendly Flask interface in `app.py`.
-   - User enters a `product_id`, and the app:
+   - User enters a `Category`, and the app:
      - Displays the corresponding product image
      - Predicts and shows the clothing category (Dress or Jeans)
 
